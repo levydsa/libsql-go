@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/tursodatabase/go-libsql"
 	"os"
+
+	"github.com/tursodatabase/go-libsql"
 )
 
 func run() (err error) {
@@ -73,7 +75,24 @@ func run() (err error) {
 }
 
 func main() {
-	if err := run(); err != nil {
+	db, err := sql.Open("libsql", "file:test.db")
+	if err != nil {
 		panic(err)
 	}
+
+	conn, err := db.Conn(context.Background())
+	defer conn.Close()
+
+
+err = conn.Raw(func(conn any) error {
+	return conn.(libsql.Batchable).Batch(`
+		create table foo (i integer);
+		insert into foo values (1);
+	`)
+})
+
+	if err != nil {
+		panic(err)
+	}
+
 }
