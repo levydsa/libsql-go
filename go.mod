@@ -1,4 +1,4 @@
-module github.com/tursodatabase/go-libsql
+module github.com/levydsa/libsql-go
 
 go 1.20
 

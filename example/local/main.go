@@ -75,7 +75,7 @@ func run() (err error) {
 }
 
 func main() {
-	db, err := sql.Open("libsql", "file:test.db")
+	db, err := sql.Open("libsql", ":memory:")
 	if err != nil {
 		panic(err)
 	}
@@ -84,12 +84,12 @@ func main() {
 	defer conn.Close()
 
 
-err = conn.Raw(func(conn any) error {
-	return conn.(libsql.Batchable).Batch(`
-		create table foo (i integer);
-		insert into foo values (1);
-	`)
-})
+	err = conn.Raw(func(conn any) error {
+		return conn.(libsql.Batchable).Batch(`
+			create table foo (i integer);
+			insert into foo values (1);
+		`)
+	})
 
 	if err != nil {
 		panic(err)
