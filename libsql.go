@@ -239,7 +239,7 @@ func NewConnector(opt ConnectorOptions) (*Connector, error) {
 		encryption_key:       nil, // TODO: not supported, for now
 		not_read_your_writes: C.bool(opt.notReadYourWrites),
 		webpki:               C.bool(opt.webpki),
-		sync_interval:        C.ulonglong(opt.syncInterval),
+		sync_interval:        C.uint64_t(opt.syncInterval),
 	})
 	if db.err != nil {
 		return nil, goErr(db.err)
@@ -421,14 +421,14 @@ func (stmt *statement) Bind(args []driver.NamedValue) error {
 				if a.(bool) {
 					v = 1
 				}
-				return C.libsql_integer(C.longlong(v))
+				return C.libsql_integer(C.int64_t(v))
 			})
 			if err != nil {
 				return err
 			}
 		case int64:
 			err := stmt.bindSingle(arg, func(a any) C.libsql_value_t {
-				return C.libsql_integer(C.longlong(a.(int64)))
+				return C.libsql_integer(C.int64_t(a.(int64)))
 			})
 			if err != nil {
 				return err
@@ -458,7 +458,7 @@ func (stmt *statement) Bind(args []driver.NamedValue) error {
 			defer C.free(unsafe.Pointer(value))
 
 			err := stmt.bindSingle(arg, func(a any) C.libsql_value_t {
-				return C.libsql_text(value, C.ulong(len(valueString)))
+				return C.libsql_text(value, C.size_t(len(valueString)))
 			})
 			if err != nil {
 				return err
@@ -469,7 +469,7 @@ func (stmt *statement) Bind(args []driver.NamedValue) error {
 			defer C.free(unsafe.Pointer(value))
 
 			err := stmt.bindSingle(arg, func(a any) C.libsql_value_t {
-				return C.libsql_blob((*C.uchar)(value), C.ulong(len(valueBytes)))
+				return C.libsql_blob((*C.uchar)(value), C.size_t(len(valueBytes)))
 			})
 			if err != nil {
 				return err

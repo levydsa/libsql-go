@@ -2,10 +2,7 @@ module github.com/levydsa/libsql-go
 
 go 1.20
 
-require (
-	golang.org/x/sync v0.6.0
-	gotest.tools v2.2.0+incompatible
-)
+require gotest.tools v2.2.0+incompatible
 
 require (
 	github.com/google/go-cmp v0.5.9 // indirect
