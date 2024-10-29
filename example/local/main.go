@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tursodatabase/go-libsql"
+	"github.com/levydsa/libsql-go"
 )
 
 func run() (err error) {

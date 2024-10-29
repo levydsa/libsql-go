@@ -10,6 +10,7 @@ package libsql
 #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/lib/x86_64-unknown-linux-gnu
 #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/lib/aarch64-unknown-linux-gnu
 #cgo LDFLAGS: -llibsql
+#cgo LDFLAGS: -lm
 #cgo darwin LDFLAGS: -framework Security
 #cgo darwin LDFLAGS: -framework CoreFoundation
 #include <libsql.h>
