@@ -5,7 +5,6 @@ package libsql
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/lib/
-#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/lib/x86_64-apple-darwin
 #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/lib/aarch64-apple-darwin
 #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/lib/x86_64-unknown-linux-gnu
 #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/lib/aarch64-unknown-linux-gnu
@@ -26,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -187,23 +187,72 @@ func (d Driver) OpenConnector(dbAddress string) (driver.Connector, error) {
 		return nil, err
 	}
 
+	path := u.Query().Get("path")
+	authToken := u.Query().Get("authToken")
+	encryptionKey := u.Query().Get("encryptionKey")
+
+	var withWebpki bool
+	{
+		s := u.Query().Get("withWebpki")
+
+		switch s {
+		case "true":
+			withWebpki = true
+		case "false":
+			withWebpki = false
+		case "":
+			withWebpki = false
+		default:
+			return nil, errors.New("withWebpki must be either `true` or `false`")
+		}
+	}
+
+	var readYourWrites bool
+	{
+		s := u.Query().Get("readYourWrites")
+
+		switch s {
+		case "true":
+			readYourWrites = true
+		case "false":
+			readYourWrites = false
+		case "":
+			readYourWrites = false
+		default:
+			return nil, errors.New("readYourWrites must be either `true` or `false`")
+		}
+	}
+
+	syncInterval := 0
+	{
+		s := u.Query().Get("syncInterval")
+		if s != "" {
+			syncInterval, err = strconv.Atoi(s)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	switch u.Scheme {
 	case "file":
 		return NewConnector(ConnectorOptions{
-			path: u.Opaque,
+			path:          u.Opaque,
+			encryptionKey: encryptionKey,
 		})
 	case "http", "https", "libsql":
-		authToken := u.Query().Get("authToken")
-		path := u.Query().Get("path")
-
 		return NewConnector(ConnectorOptions{
-			path:      path,
-			url:       "libsql://" + u.Hostname(),
-			authToken: authToken,
+			path:          path,
+			url:           "libsql://" + u.Hostname(),
+			authToken:     authToken,
+			encryptionKey: encryptionKey,
+			syncInterval:  uint64(syncInterval),
+			withWebpki:    withWebpki,
+			notReadYourWrites: !readYourWrites,
 		})
 	}
 
-	return nil, fmt.Errorf("unsupported URL scheme: %s\nThis driver supports only URLs that start with libsql://, file:, https:// or http://", u.Scheme)
+	return nil, fmt.Errorf("Unsupported URL scheme: %s\nThis driver supports only URLs that start with libsql://, file:, https:// or http://", u.Scheme)
 }
 
 type ConnectorOptions struct {
@@ -212,7 +261,7 @@ type ConnectorOptions struct {
 	authToken         string
 	encryptionKey     string
 	syncInterval      uint64
-	webpki            bool
+	withWebpki        bool
 	notReadYourWrites bool
 }
 
@@ -230,16 +279,16 @@ func NewConnector(opt ConnectorOptions) (*Connector, error) {
 	authToken, free := cString(opt.authToken)
 	defer free()
 
-	// encryptionKey, free := cString(opt.encryptionKey)
-	// defer free()
+	encryptionKey, free := cString(opt.encryptionKey)
+	defer free()
 
 	db := C.libsql_database_init(C.libsql_database_desc_t{
 		path:                 path,
 		url:                  url,
 		auth_token:           authToken,
-		encryption_key:       nil, // TODO: not supported, for now
-		not_read_your_writes: C.bool(opt.notReadYourWrites),
-		webpki:               C.bool(opt.webpki),
+		encryption_key:       encryptionKey,
+		disable_read_your_writes: C.bool(opt.notReadYourWrites),
+		webpki:               C.bool(opt.withWebpki),
 		sync_interval:        C.uint64_t(opt.syncInterval),
 	})
 	if db.err != nil {
