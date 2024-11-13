@@ -131,11 +131,11 @@ func NewEmbeddedReplicaConnector(dbPath string, primaryUrl string, opts ...Optio
 	}
 
 	return NewConnector(ConnectorOptions{
-		url:               primaryUrl,
-		path:              dbPath,
-		authToken:         authToken,
-		encryptionKey:     encryptionKey,
-		notReadYourWrites: !readYourWrites,
+		Url:               primaryUrl,
+		Path:              dbPath,
+		AuthToken:         authToken,
+		EncryptionKey:     encryptionKey,
+		DisableReadYourWrites: !readYourWrites,
 		syncInterval:      uint64(syncInterval.Milliseconds()),
 	})
 }
@@ -237,18 +237,18 @@ func (d Driver) OpenConnector(dbAddress string) (driver.Connector, error) {
 	switch u.Scheme {
 	case "file":
 		return NewConnector(ConnectorOptions{
-			path:          u.Opaque,
-			encryptionKey: encryptionKey,
+			Path:          u.Opaque,
+			EncryptionKey: encryptionKey,
 		})
 	case "http", "https", "libsql":
 		return NewConnector(ConnectorOptions{
-			path:          path,
-			url:           "libsql://" + u.Hostname(),
-			authToken:     authToken,
-			encryptionKey: encryptionKey,
+			Path:          path,
+			Url:           "libsql://" + u.Hostname(),
+			AuthToken:     authToken,
+			EncryptionKey: encryptionKey,
 			syncInterval:  uint64(syncInterval),
-			withWebpki:    withWebpki,
-			notReadYourWrites: !readYourWrites,
+			WithWebpki:    withWebpki,
+			DisableReadYourWrites: !readYourWrites,
 		})
 	}
 
@@ -256,13 +256,13 @@ func (d Driver) OpenConnector(dbAddress string) (driver.Connector, error) {
 }
 
 type ConnectorOptions struct {
-	url               string
-	path              string
-	authToken         string
-	encryptionKey     string
+	Url               string
+	Path              string
+	AuthToken         string
+	EncryptionKey     string
 	syncInterval      uint64
-	withWebpki        bool
-	notReadYourWrites bool
+	WithWebpki        bool
+	DisableReadYourWrites bool
 }
 
 type Connector struct {
@@ -270,25 +270,27 @@ type Connector struct {
 }
 
 func NewConnector(opt ConnectorOptions) (*Connector, error) {
-	path, free := cString(opt.path)
+	path, free := cString(opt.Path)
 	defer free()
 
-	url, free := cString(opt.url)
+	url, free := cString(opt.Url)
 	defer free()
 
-	authToken, free := cString(opt.authToken)
+	authToken, free := cString(opt.AuthToken)
 	defer free()
 
-	encryptionKey, free := cString(opt.encryptionKey)
+	println(opt.EncryptionKey)
+	encryptionKey, free := cString(opt.EncryptionKey)
 	defer free()
+
 
 	db := C.libsql_database_init(C.libsql_database_desc_t{
 		path:                 path,
 		url:                  url,
 		auth_token:           authToken,
 		encryption_key:       encryptionKey,
-		disable_read_your_writes: C.bool(opt.notReadYourWrites),
-		webpki:               C.bool(opt.withWebpki),
+		disable_read_your_writes: C.bool(opt.DisableReadYourWrites),
+		webpki:               C.bool(opt.WithWebpki),
 		sync_interval:        C.uint64_t(opt.syncInterval),
 	})
 	if db.err != nil {
